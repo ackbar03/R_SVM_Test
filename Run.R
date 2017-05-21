@@ -183,7 +183,7 @@ for (i in 1:length(hpList)) {
 #Create Data for ML testing
   #Select Output first and concantenate with source data
 
-MLData <- data.frame(TSShtList[[2]][1], DataList[[1]][-4])
+MLData <- data.frame(TSLngList[[3]][1], DataList[[1]][-4])
   #Merge with rest of the data
   #***note may lead to some issues. It may be safer to merge and stuff in the beginning in 
   #case there are irregular holidays and stuff. Otherwise lag variables won't make complete
@@ -230,6 +230,16 @@ svp <- ksvm(xtest, ychartest, kernel = "rbfdot", kpar = "automatic", C = 10, cro
 
 #putting type = "probabilities" to show probability of falling into each class 
 #instead of actual output
+
+
+
+
+
+#rerun with prob model, otherwise gives an error
+
+svp <- ksvm(xtest, ychartest, kernel = "rbfdot", kpar = "automatic", C = 10, prob.model= TRUE)
+
+
 ypredprob = predict(svp, xtest[8:nrow(xtest),], type = "probabilities")
 ypred = predict(svp, xtest[8:nrow(xtest),])
 
@@ -281,11 +291,30 @@ for (i in -1:11) {
 
 
 
+#########add a graph function ##################
+#### extract entries that sandwich a 1 classifier output
+
+chart_hearder= 15
+chart_footer = 15
+
+
+
+
+#hardcoded values to see what is going on. 
+  plot(preddfprob[3490:5000, 10], type="l")
+  par(new = T)
+  plot(preddfprob[3490:5000, 3], type="l", axes = F, ylab = '', col = "Gray")
+  par(new = T)
+  plot(preddfprob[3490:5000, 2], type="l", axes = F, ylab = '', col = "Green")
+  axis(side = 4)
+  title(main="Lng, HP3, Pl1")
+
+
 
 
 
 #try varying holding time, might actually not make sense logically
-
+#need non=tradedate adjutment to accomoate for gap opens
 
 
 
