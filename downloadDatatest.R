@@ -1,3 +1,5 @@
+#did this for testing on downloading data. Not used in main code
+
 
 a = c(1)
 
