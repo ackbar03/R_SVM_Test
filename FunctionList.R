@@ -12,6 +12,28 @@ createLagVar <- function(input, lag_freq) {
   out
 }
 
+
+#the create lags seem redundant
+# createLagMaxVar <- function(input, lag_freq) {
+# #only works for 1column series
+#   out <- data.frame(matrix(NA, nrow = nrow(input), ncol = 1))
+#   for (i in max(1, 1+lag_freq):min(nrow(input), nrow(input) + lag_freq)) {
+#     out[i,]=max(input[i:i-lag_freq, ])
+#   }
+#   out
+# }
+# 
+# createLagMinVar <- function(input, lag_freq) {
+#   #only works for 1column series
+#   out <- data.frame(matrix(NA, nrow = nrow(input), ncol = 1))
+#   for (i in max(1, 1+lag_freq):min(nrow(input), nrow(input) + lag_freq)) {
+#     out[i,]=min(input[i-lag_freq:i, ])
+#   }
+#   out
+# }
+
+
+
 minPeriod <- function(input, lag_freq) {
   #taken based on close value
   out <- data.frame(matrix(NA, nrow = nrow(input), ncol = 1))
@@ -64,3 +86,6 @@ na.lomf <- function(x) {
     apply(x, dim.len, na.lomf.0)
   }
 }
+
+
+cleanMem <- function(n=20) { for (i in 1:n) gc() }

@@ -56,8 +56,10 @@ for (i in seq(as.Date("2016/10/8"), as.Date("2016/10/15"), 1)) {
 print("datadownloaded")
 
 #check deuplicates
-anyDuplicated(data1[c(1:3)])
-
+if (anyDuplicated(data1[c(1:3)])>0) {
+  
+  print("!!!!Somethings wrong!!!!!")
+}
 
 
 #seperate into currencies
@@ -141,6 +143,12 @@ for(i in 1:length(DataList)) {
 
 
 print("datagenerated")
+
+rm(data1,TempData)
+cleanMem()
+
+
+
 
 #Generate trading signals
 FutShiftLst <- list()
@@ -252,43 +260,92 @@ xtest<-data.matrix(MLData[-4])
 
 
 
-#rerun with prob model, otherwise gives an error
+#We run with structured parameter search, time to get serious
+#rbfdot and vanilladot have different number of parameters, need to compare seperately
+#lets just start with C value first. Previously looked at kpar value but forgot how it worked
 
-print("running first svm")
+print("running rbfdot svm grid search")
 
-svp <- ksvm(xtest, ychartest, kernel = "rbfdot", kpar = "automatic", C = 10, prob.model= TRUE, cross = 4)
+CSearchCRBF <- c(rep.int(-1, 7))
 
-print("done")
+for (i in -1:5) {
+  print(memory.size())
+  svp <- ksvm(xtest, ychartest, kernel = "rbfdot", kpar = "automatic", C = 2^i, prob.model= TRUE, cross = 4)
+  CSearchCRBF[i+2] = cross(svp)
+  
+  rm(svp)
+  cleanMem()
+  print(memory.size())
+  
+  #Both Error and Cross results show that higher C lead to better result. I guess reduce
+  #overfitting? Hard to say with current data however
+}
+
+ifelse(!dir.exists("CGrdSrchOutput"), dir.create("CGrdSrchOutput"), FALSE)
+
+save(CSearchC, file = "CGrdSrchOutput/rbfdotCEGrid.Rda")
 
 
-ypredprob = predict(svp, xtest[8:nrow(xtest),], type = "probabilities")
-ypred = predict(svp, xtest[8:nrow(xtest),])
 
-preddf <-data.frame(ypred, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
-#View(preddf[preddf[2]=="1"| preddf[1]=="1",])
 
-preddfprob <-data.frame(ypredprob, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
-#View(preddfprob[preddfprob[3]=="1",])
+# 
+# ypredprob = predict(svp, xtest[8:nrow(xtest),], type = "probabilities")
+# ypred = predict(svp, xtest[8:nrow(xtest),])
+# 
+# preddf <-data.frame(ypred, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
+# #View(preddf[preddf[2]=="1"| preddf[1]=="1",])
+# 
+# preddfprob <-data.frame(ypredprob, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
+# #View(preddfprob[preddfprob[3]=="1",])
+
 
 
 
 print("running second svm")
 #try linear kernal. According to cookbook when features large maybe just use linear 
-svp <- ksvm(xtest, ychartest, kernel = "vanilladot", C = 10, prob.model= TRUE, cross = 4)
 
-print("done")
+CSearchCLin <- c(rep.int(-1, 7))
 
-ypredprob = predict(svp, xtest[8:nrow(xtest),], type = "probabilities")
-ypred = predict(svp, xtest[8:nrow(xtest),])
+for (i in -1:5) {
+  print(memory.size())
+  
+  svp <- ksvm(xtest, ychartest, kernel = "vanilladot", C = 2^i, prob.model= TRUE, cross = 4)
+  
+  CSearchCLin[i+2] = cross(svp)
+  
+  rm(svp)
+  cleanMem()
+  print(memory.size())
+  
+  #Both Error and Cross results show that higher C lead to better result. I guess reduce
+  #overfitting? Hard to say with current data however
+}
 
-print("notcrashed1")
-preddf <-data.frame(ypred, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
-#View(preddf[preddf[2]=="1"| preddf[1]=="1",])
+ifelse(!dir.exists("CGrdSrchOutput"), dir.create("CGrdSrchOutput"), FALSE)
 
-print("notcrashed2")
-preddfprob <-data.frame(ypredprob, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
-#View(preddfprob[preddfprob[3]=="1",])
+save(CSearchCLin, file = "CGrdSrchOutput/LinCEGrid.Rda")
 
+
+# 
+# 
+# 
+# print("running second svm")
+# #try linear kernal. According to cookbook when features large maybe just use linear 
+# svp <- ksvm(xtest, ychartest, kernel = "vanilladot", C = 10, prob.model= TRUE, cross = 4)
+# 
+# print("done")
+# 
+# ypredprob = predict(svp, xtest[8:nrow(xtest),], type = "probabilities")
+# ypred = predict(svp, xtest[8:nrow(xtest),])
+# 
+# print("notcrashed1")
+# preddf <-data.frame(ypred, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
+# #View(preddf[preddf[2]=="1"| preddf[1]=="1",])
+# 
+# print("notcrashed2")
+# preddfprob <-data.frame(ypredprob, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
+# #View(preddfprob[preddfprob[3]=="1",])
+# 
 
 
 
@@ -298,21 +355,7 @@ preddfprob <-data.frame(ypredprob, ytest[8:nrow(xtest)], xtest[8:nrow(xtest),])
 
 #test grid search, try for radial model first
 
-# CSearchE <- c(rep.int(-1, 21))
-# CSearchC <- c(rep.int(-1, 21))
-# 
-# for (i in -1:11) {
-#   
-#   svpCS <- ksvm(xtest, ychartest, kernel = "rbfdot", kpar = "automatic", C = 2^i, 
-#                 prob.model= TRUE, cross = 4)
-#   
-#   CSearchE[i+6] = error(svpCS)
-#   CSearchC[i+6] = cross(svpCS)
-#   
-#   #Both Error and Cross results show that higher C lead to better result. I guess reduce
-#   #overfitting? Hard to say with current data however
-#   
-# }
+
 
 
 
