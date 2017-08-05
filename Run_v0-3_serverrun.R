@@ -1,11 +1,11 @@
 
-sink("Rlog.txt", append=FALSE, split=TRUE)
+sink(paste("Rlog Run ", Sys.Date(), ".txt", sep=""), append=FALSE, split=TRUE)
 
 source("FunctionList.R")
 library(kernlab)
 
 
-ModelLag = 7
+ModelLag = 10
 
 #holding period parameters
 hpList <-list()
@@ -30,7 +30,7 @@ drwDnTgt = 0.9
 data1 <- data.frame()
 temp <- tempfile()
 
-for (i in seq(as.Date("2016/10/8"), as.Date("2016/10/15"), 1)) {
+for (i in seq(as.Date("2017/6/1"), as.Date("2017/7/15"), 1)) {
   
   if (weekdays(as.Date(i, origin="1970-01-01"))== "Sunday" | 
       weekdays(as.Date(i, origin="1970-01-01"))== "Saturday") next else { 
@@ -53,12 +53,12 @@ for (i in seq(as.Date("2016/10/8"), as.Date("2016/10/15"), 1)) {
   }
 }
 
-print("datadownloaded")
+print(paste("Data Downloaded ", Sys.time(), sep=""))
 
 #check deuplicates
 if (anyDuplicated(data1[c(1:3)])>0) {
   
-  print("!!!!Somethings wrong!!!!!")
+  print(paste("!!!!Somethings wrong!!!!!", Sys.time(), sep=""))
 }
 
 
@@ -72,7 +72,7 @@ ccYKeep <- c("EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "AUDJPY
 "USDHKD", "USDMXN", "USDTRY")
 
 
-print("Generating data")
+print(paste("Generating data", Sys.time(), sep=""))
 
 DataList <- list()
 
@@ -135,14 +135,14 @@ for(i in 1:length(DataList)) {
     colnames(DataList[[i]])[length(DataList[[i]])] = 
       paste(colnames(DataList[[i]][8]), "L_", j, sep="")
     
-    print(paste("i'm still working, i is ",i , sep = ""))
-    print(paste("i'm still working, j is ", j, sep = ""))
+    print(paste("i'm still working, variable (i) is ",i , Sys.time(), sep = ""))
+    print(paste("i'm still working, lag (j) is ", j, Sys.time(), sep = ""))
   }
 }
 
 
 
-print("datagenerated")
+print(paste("data finished generating",Sys.time(), sep = ""))
 
 rm(data1,TempData)
 cleanMem()
@@ -161,6 +161,8 @@ MaxDrwDnList <- list()
 
 TSLngList <- list()
 TSShtList <- list()
+
+print(paste("Creating Signals", Sys.time(), sep = ""))
 
 for (i in 1:length(hpList)) {
   FutShiftLst[[i]] <- createLagVar(DataList[[1]][8], hpList[[i]]*-1)
@@ -189,7 +191,7 @@ for (i in 1:length(hpList)) {
                                         MaxDrwDnList[[i]]< plTargets[[3]]*drwDnTgt, 1, 0)
   )
 
-  print(paste("generating signals for i = ", i, sep=""))
+  print(paste("generating signals for i = ", i, Sys.time(), sep = ""))
   
   }
 
@@ -264,26 +266,32 @@ xtest<-data.matrix(MLData[-4])
 #rbfdot and vanilladot have different number of parameters, need to compare seperately
 #lets just start with C value first. Previously looked at kpar value but forgot how it worked
 
-print("running rbfdot svm grid search")
+print(paste("running rbfdot svm grid search",Sys.time(), sep = ""))
 
 CSearchCRBF <- c(rep.int(-1, 7))
 
 for (i in -1:5) {
-  print(memory.size())
+  #print(memory.size())
   svp <- ksvm(xtest, ychartest, kernel = "rbfdot", kpar = "automatic", C = 2^i, prob.model= TRUE, cross = 4)
   CSearchCRBF[i+2] = cross(svp)
   
+  print(paste("run finsihed for rbdot C par = ", i, " ", Sys.time(), sep = ""))
+  
   rm(svp)
   cleanMem()
-  print(memory.size())
+  #print(memory.size())
+  
+  
   
   #Both Error and Cross results show that higher C lead to better result. I guess reduce
   #overfitting? Hard to say with current data however
 }
 
+CSearchCRBF
+
 ifelse(!dir.exists("CGrdSrchOutput"), dir.create("CGrdSrchOutput"), FALSE)
 
-save(CSearchC, file = "CGrdSrchOutput/rbfdotCEGrid.Rda")
+save(CSearchCRBF, file = "CGrdSrchOutput/rbfdotCEGrid.Rda")
 
 
 
@@ -307,7 +315,7 @@ print("running second svm")
 CSearchCLin <- c(rep.int(-1, 7))
 
 for (i in -1:5) {
-  print(memory.size())
+
   
   svp <- ksvm(xtest, ychartest, kernel = "vanilladot", C = 2^i, prob.model= TRUE, cross = 4)
   
@@ -315,11 +323,13 @@ for (i in -1:5) {
   
   rm(svp)
   cleanMem()
-  print(memory.size())
+  print(paste("run finsihed for vanilladot C par = ", i, " ", Sys.time(), sep = ""))
   
   #Both Error and Cross results show that higher C lead to better result. I guess reduce
   #overfitting? Hard to say with current data however
 }
+
+CSearchCLin
 
 ifelse(!dir.exists("CGrdSrchOutput"), dir.create("CGrdSrchOutput"), FALSE)
 
@@ -357,34 +367,55 @@ save(CSearchCLin, file = "CGrdSrchOutput/LinCEGrid.Rda")
 
 
 
+Signal_Number = 0
+
+Chrt_Strt_Pt= -1
+Chrt_End_Pt = -1
+
+RwScrl = 2
+
+while (!is.na(preddfprob[RwScrl, 3])) {
+  
+  if(preddfprob[RwScrl, 3] == 1 & preddfprob[RwScrl-1, 3] == 0) {
+    Signal_Number = Signal_Number + 1
+    
+    Chrt_Strt_Pt = max(1, RwScrl - 30)
+    Chrt_End_Pt = Chrt_Strt_Pt
+  } else if ((preddfprob[RwScrl, 3] == 0 & preddfprob[RwScrl-1, 3] == 1 ) | (RwScrl == nrow(preddfprob))) {
+    
+    Chrt_End_Pt = min(nrow(preddfprob), RwScrl+30)
+    
+    #identified end of section, plot graph, long or short and tp needs to be added
+    jpeg(paste("Graph no.", Signal_Number, " , Strt " , preddfprob[Chrt_Strt_Pt, 4], "-",
+               preddfprob[Chrt_Strt_Pt, 5], "m End ", preddfprob[Chrt_End_Pt, 4], "-", 
+               preddfprob[Chrt_End_Pt, 5], "m", ".jpg", sep=""))
+    
+    plot( preddfprob[Chrt_Strt_Pt:Chrt_End_Pt, 4] + preddfprob[Chrt_Strt_Pt:Chrt_End_Pt, 5]/1440, preddfprob[Chrt_Strt_Pt:Chrt_End_Pt, 7], type="l")
+    par(new = T)
+    plot(preddfprob[Chrt_Strt_Pt:Chrt_End_Pt, 2], type="l", axes = F, ylab = '', col = "Green")
+    axis(side = 4)
+    par(new = T)
+    plot(preddfprob[Chrt_Strt_Pt:Chrt_End_Pt, 3], type="l", axes = F, ylab = '', col = "Gray")
+    
+    title(main=paste("Graph no.", Signal_Number, " , Strt " , preddfprob[Chrt_Strt_Pt, 4], "-",
+                     preddfprob[Chrt_Strt_Pt, 5], "m End ", preddfprob[Chrt_End_Pt, 4], "-", 
+                     preddfprob[Chrt_End_Pt, 5], "m", sep=""))
+    
+    dev.off()
+    
+  } else {
+    
+  }
+  
+  RwScrl = RwScrl + 1
+}
 
 
-#########add a graph function ##################
-#### extract entries that sandwich a 1 classifier output
-
-chart_hearder= 15
-chart_footer = 15
 
 
 
-print("notcrashed2")
-#hardcoded values to see what is going on. 
-
-jpeg("graphtest.jpg")
-
-print("notcrashed 5")
-  plot(preddfprob[3490:5000, 10], type="l")
-  par(new = T)
-  plot(preddfprob[3490:5000, 3], type="l", axes = F, ylab = '', col = "Gray")
-  par(new = T)
-  plot(preddfprob[3490:5000, 2], type="l", axes = F, ylab = '', col = "Green")
-  axis(side = 4)
-  title(main="Lng, HP3, Pl1")
-
-dev.off()
 
 
-sink()
 
 #try varying holding time, might actually not make sense logically
 #need non=tradedate adjutment to accomoate for gap opens
