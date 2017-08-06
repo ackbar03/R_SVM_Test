@@ -5,7 +5,7 @@ source("FunctionList.R")
 library(kernlab)
 
 
-ModelLag = 10
+ModelLag = 15
 
 #holding period parameters
 hpList <-list()
@@ -58,7 +58,7 @@ print(paste("Data Downloaded ", Sys.time(), sep=""))
 #check deuplicates
 if (anyDuplicated(data1[c(1:3)])>0) {
   
-  print(paste("!!!!Somethings wrong!!!!!", Sys.time(), sep=""))
+  print(paste("!!!!Somethings wrong!!!!! ", Sys.time(), sep=""))
 }
 
 
@@ -135,14 +135,14 @@ for(i in 1:length(DataList)) {
     colnames(DataList[[i]])[length(DataList[[i]])] = 
       paste(colnames(DataList[[i]][8]), "L_", j, sep="")
     
-    print(paste("i'm still working, variable (i) is ",i , Sys.time(), sep = ""))
-    print(paste("i'm still working, lag (j) is ", j, Sys.time(), sep = ""))
+    print(paste("i'm still working, variable (i) is ",i , " ", Sys.time(), sep = ""))
+    print(paste("i'm still working, lag (j) is ", j, " ", Sys.time(), sep = ""))
   }
 }
 
 
 
-print(paste("data finished generating",Sys.time(), sep = ""))
+print(paste("data finished generating ",Sys.time(), sep = ""))
 
 rm(data1,TempData)
 cleanMem()
@@ -162,7 +162,7 @@ MaxDrwDnList <- list()
 TSLngList <- list()
 TSShtList <- list()
 
-print(paste("Creating Signals", Sys.time(), sep = ""))
+print(paste("Creating Signals ", Sys.time(), sep = ""))
 
 for (i in 1:length(hpList)) {
   FutShiftLst[[i]] <- createLagVar(DataList[[1]][8], hpList[[i]]*-1)
@@ -191,7 +191,7 @@ for (i in 1:length(hpList)) {
                                         MaxDrwDnList[[i]]< plTargets[[3]]*drwDnTgt, 1, 0)
   )
 
-  print(paste("generating signals for i = ", i, Sys.time(), sep = ""))
+  print(paste("generating signals for i = ", i,  " ", Sys.time(), sep = ""))
   
   }
 
@@ -266,14 +266,25 @@ xtest<-data.matrix(MLData[-4])
 #rbfdot and vanilladot have different number of parameters, need to compare seperately
 #lets just start with C value first. Previously looked at kpar value but forgot how it worked
 
-print(paste("running rbfdot svm grid search",Sys.time(), sep = ""))
+print(paste("running rbfdot svm grid search ",Sys.time(), sep = ""))
 
 CSearchCRBF <- c(rep.int(-1, 7))
+
+maxCRBIndex = -1
+maxCRBValue = 9999
+
+ 
 
 for (i in -1:5) {
   #print(memory.size())
   svp <- ksvm(xtest, ychartest, kernel = "rbfdot", kpar = "automatic", C = 2^i, prob.model= TRUE, cross = 4)
   CSearchCRBF[i+2] = cross(svp)
+  
+  if (cross(svp)<maxCRBValue) {
+    maxCRBValue = cross(svp)
+    maxCRBIndex = i
+    svpRbf_Best <- svp
+  }
   
   print(paste("run finsihed for rbdot C par = ", i, " ", Sys.time(), sep = ""))
   
@@ -288,6 +299,9 @@ for (i in -1:5) {
 }
 
 CSearchCRBF
+
+print(paste("C Search finished for rbfdot model, best C is ", maxCRBIndex, 
+            "; error is ", maxCRBValue, " ", Sys.time(), sep = ""))
 
 ifelse(!dir.exists("CGrdSrchOutput"), dir.create("CGrdSrchOutput"), FALSE)
 
@@ -314,12 +328,21 @@ print("running second svm")
 
 CSearchCLin <- c(rep.int(-1, 7))
 
+maxCLnIndex = -1
+maxCLnValue = 9999
+
 for (i in -1:5) {
 
   
   svp <- ksvm(xtest, ychartest, kernel = "vanilladot", C = 2^i, prob.model= TRUE, cross = 4)
   
   CSearchCLin[i+2] = cross(svp)
+  
+  if (cross(svp)<maxCLnValue) {
+    maxCLnValue = cross(svp)
+    maxCLnIndex = i
+    svpLin_Best <- svp
+  }
   
   rm(svp)
   cleanMem()
@@ -335,6 +358,22 @@ ifelse(!dir.exists("CGrdSrchOutput"), dir.create("CGrdSrchOutput"), FALSE)
 
 save(CSearchCLin, file = "CGrdSrchOutput/LinCEGrid.Rda")
 
+
+
+if (maxCLnValue < maxCRBValue) {
+  
+  svp_best <- svpLin_Best
+} else {svp_best <- svpRbf_Best }
+
+
+
+print(paste("Generating model predicted values ",  Sys.time(), sep = ""))
+
+
+ypredprob = predict(svp_best, xtest[ (ModelLag+1):nrow(xtest),], type = "probabilities")
+preddfprob <-data.frame(ypredprob, ytest[(ModelLag+1):nrow(xtest)], xtest[(ModelLag+1):nrow(xtest),])
+
+print(paste("Model predicted values generated ",  Sys.time(), sep = ""))
 
 # 
 # 
@@ -365,7 +404,7 @@ save(CSearchCLin, file = "CGrdSrchOutput/LinCEGrid.Rda")
 
 #test grid search, try for radial model first
 
-
+print(paste("Generating charts ",  Sys.time(), sep = ""))
 
 Signal_Number = 0
 
@@ -402,6 +441,9 @@ while (!is.na(preddfprob[RwScrl, 3])) {
                      preddfprob[Chrt_End_Pt, 5], "m", sep=""))
     
     dev.off()
+    
+    
+    print(paste("Chart ",  Signal_Number, " generated ", Sys.time(), sep = ""))
     
   } else {
     
