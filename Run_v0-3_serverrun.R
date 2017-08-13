@@ -35,7 +35,7 @@ drwDnTgt = 0.9
 data1 <- data.frame()
 temp <- tempfile()
 
-for (i in seq(as.Date("2017/6/1"), as.Date("2017/7/1"), 1)) {
+for (i in seq(as.Date("2017/6/1"), as.Date("2017/6/15"), 1)) {
   
   if (weekdays(as.Date(i, origin="1970-01-01"))== "Sunday" | 
       weekdays(as.Date(i, origin="1970-01-01"))== "Saturday") next else { 
