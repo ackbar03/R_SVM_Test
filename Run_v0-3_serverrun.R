@@ -35,7 +35,7 @@ drwDnTgt = 0.9
 data1 <- data.frame()
 temp <- tempfile()
 
-for (i in seq(as.Date("2017/6/1"), as.Date("2017/6/15"), 1)) {
+for (i in seq(as.Date("2017/6/1"), as.Date("2017/7/1"), 1)) {
   
   if (weekdays(as.Date(i, origin="1970-01-01"))== "Sunday" | 
       weekdays(as.Date(i, origin="1970-01-01"))== "Saturday") next else { 
@@ -311,7 +311,7 @@ print(paste("C Search finished for rbfdot model, best C is ", maxCRBIndex,
 ifelse(!dir.exists("CGrdSrchOutput"), dir.create("CGrdSrchOutput"), FALSE)
 
 save(CSearchCRBF, file = "CGrdSrchOutput/rbfdotCEGrid.Rda")
-
+save(svpRbf_Best, file = "CGrdSrchOutput/SvpRBfBest.Rda")
 
 
 
@@ -359,16 +359,21 @@ for (i in -1:5) {
 
 CSearchCLin
 
+print(paste("C Search finished for linear model, best C is ", maxCLnIndex, 
+            "; error is ", maxCLnValue, " ", Sys.time(), sep = ""))
+
 ifelse(!dir.exists("CGrdSrchOutput"), dir.create("CGrdSrchOutput"), FALSE)
 
 save(CSearchCLin, file = "CGrdSrchOutput/LinCEGrid.Rda")
-
+save(svpLin_Best, file = "CGrdSrchOutput/SvpLBest.Rda")
 
 
 if (maxCLnValue < maxCRBValue) {
   
   svp_best <- svpLin_Best
 } else {svp_best <- svpRbf_Best }
+
+save(CSearchCLin, file = "CGrdSrchOutput/LinCEGrid.Rda")
 
 
 
