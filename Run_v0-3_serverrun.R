@@ -1,3 +1,8 @@
+list.of.packages <- c("kernlab")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+
 
 sink(paste("Rlog Run ", Sys.Date(), ".txt", sep=""), append=FALSE, split=TRUE)
 
@@ -30,7 +35,7 @@ drwDnTgt = 0.9
 data1 <- data.frame()
 temp <- tempfile()
 
-for (i in seq(as.Date("2017/6/1"), as.Date("2017/7/15"), 1)) {
+for (i in seq(as.Date("2017/6/1"), as.Date("2017/7/1"), 1)) {
   
   if (weekdays(as.Date(i, origin="1970-01-01"))== "Sunday" | 
       weekdays(as.Date(i, origin="1970-01-01"))== "Saturday") next else { 
@@ -68,8 +73,8 @@ ccyList <- unique(data1[1])
 uniqueDateTime <- unique(data1[c(2,3,8)])
 
 ccYKeep <- c("EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "AUDJPY", "NZDUSD",
-"NZDJPY", "XAUUSD", "XAGUSD", "USDCZK", "USDDKK", "USDRUB", "USDSEK", "USDSGD", "USDZAR", 
-"USDHKD", "USDMXN", "USDTRY")
+"NZDJPY", "XAUUSD", "XAGUSD", "USDSGD", "USDZAR", 
+"USDHKD", "USDMXN")
 
 
 print(paste("Generating data", Sys.time(), sep=""))
